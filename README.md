@@ -1,6 +1,8 @@
 L-BFGS-B (C++11 only, Eigen, OpenMp)
 ========
 
+CHECKOUT this repository for further updates: [https://github.com/PatWie/CppNumericalSolvers]
+<hr>
 This C++11-only implementation of the 
 
 *Limited-memory Broyden–Fletcher–Goldfarb–Shanno algorithm with bounds*
