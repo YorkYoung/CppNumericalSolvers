@@ -1,48 +1,97 @@
-L-BFGS-B (C++11 only, Eigen, OpenMp)
-========
+CppNumericalSolvers
+===================
 
-CHECKOUT this repository for further updates: [https://github.com/PatWie/CppNumericalSolvers]
-<hr>
-This C++11-only implementation of the 
+This repository contains some solvers written in C++11 using the eigen3 library for linear algebra.
 
-*Limited-memory Broyden–Fletcher–Goldfarb–Shanno algorithm with bounds*
+There are currently the following solvers:
+- gradient descent solver
+- Newton descent solver
+- BFGS solver
+- L-BFGS solver
+- L-BFGS-B solver
 
-is based on the paper
+Additional helpful functions are
 
-**A LIMITED MEMORY ALGORITHM FOR BOUND CONSTRAINED OPTIMIZATION**
+- check gradient
+- compute gradient by finite differences
+- compute Hessian matrix by finite differences
 
-(Byrd, Richard H. and Lu, Peihuang and Nocedal, Jorge and Zhu, Ciyou)
+There is a simple "unittest" inside (minimization of the Rosenbrock function). By convention these solvers minimize a function.
 
-This implementation is **not** a converted FORTRAN-implementation, **neither** and interface for the FORTRAN-Routines. It was build from the ground up in C++11 and only needs the [Eigenlibrary](http://eigen.tuxfamily.org/) for the matrix operations. Using C++11 functionals it is easy to optimize arbitrary functions.
+Usage
+----------
+You only have to define c++11-functionals for calculating the function value and gradient:
 
-###Compiling under linux
-
-To compile this with g++ make sure that you set the compiler flags to parallelize some loops:
-
-```g++ -O3 -Wall -std=c++11 -fopenmp```
-
-### Usage/Problem definition
-To solve a problem you only have to declare two functions 
-- one for the function value returning a double
-- and one the gradient (pass gradient by reference)
-
-The prototypes look like:
 ```
-double functionValue(const Vector& x);
-void functionGradient(const Vector& x, Vector& grad);
+auto function_value = [] (const Vector &x) -> double {};
+auto gradient_value = [] (const Vector x, Vector &grad) -> void {};
 ```
 
-To optimize the given function you can use
-```
-MySolver.Solve(x,functionValue,functionGradient);
-```
-by providing an initial guess `x`.
-See the file *main.cpp* for a full working example with bound. Unused bounds can be defined as ```INF``` (#define-constant).
+While I discourage you from using the numerical approximation of the gradient, the definition of the gradient functional is *optional*. To use `Newton Descent` without explicitly computing the Hessian matrix you should use `computeHessian` from `Meta.h`.
+To optimize (minimize) the function you can use:
 
-###License
+```
+Vector x0;                  // initial guess
+LbfgsSolver lbfgs;      // choose a solver
+lbfgs.Solve(x0,function_value,gradient_value);
+// or using a numerical approximation of the gradient
+lbfgs.Solve(x0,function_value);
+// or newton
+auto hessian_value = [&](const Vector x, Matrix & hes) -> void
+{
+    hes = Matrix::Zero(x.rows(), x.rows());
+    computeHessian(function_value, x, hes);
+};
+NewtonDescentSolver newton;      // or use newton descent
+newton.Solve(x0,function_value,gradient_value,hessian_value);
+```
+
+I encourage you to check you gradient by 
+```
+checkGradient(YOUR-OBJECTIVE-FUNCTION, X, A-SAMPLE-GRADIENT-VECTOR_FROM-YOUR-FUNCTIONAL);
+```
+
+full sample
+----------------
+```
+int main(void) {
+
+	// create function
+	auto rosenbrock = [] (const Vector &x) -> double {
+		const double t1 = (1-x[0]);
+		const double t2 = (x[1]-x[0]*x[0]);
+		return   t1*t1 + 100*t2*t2;
+	};
+
+	// create derivative of function
+	auto Drosenbrock = [] (const Vector x, Vector &grad) -> void {
+		grad[0]  = -2*(1-x[0])+200*(x[1]-x[0]*x[0])*(-2*x[0]);
+		grad[1]  = 200*(x[1]-x[0]*x[0]);
+	};
+
+	// initial guess
+	Vector x0(2);x0 << 1,2;
+	// get derivative
+	Vector dx0(2);
+	Drosenbrock(x0,dx0);
+	// verify gradient by finite differences
+	checkGradient(rosenbrock,x0,dx0);
+
+	// use solver (GradientDescentSolver,BfgsSolver,LbfgsSolver,LbfgsbSolver)
+	LbfgsSolver g;
+	g.Solve(x0,rosenbrock,Drosenbrock);
+
+	std::cout << std::endl<<std::endl<< x0.transpose();
+
+	return 0;
+}
+```
+
+License
+-----------
 ```
 Copyright (c) 2014 Patrick Wieschollek
-url: https://github.com/PatWie/LBFGSB
+url: https://github.com/PatWie/CppNumericalSolvers
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

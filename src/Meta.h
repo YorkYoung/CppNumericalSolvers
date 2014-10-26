@@ -1,8 +1,5 @@
 /**
- *           c++11-only implementation of the L-BFGS-B algorithm
- *
  * Copyright (c) 2014 Patrick Wieschollek
- * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,49 +20,76 @@
  * SOFTWARE.
  */
 
-#ifndef DEFINITIONS_H_
-#define DEFINITIONS_H_
 
-#include <stdexcept>
-#include <cmath>
+#ifndef META_H_
+#define META_H_
+
 
 #include <Eigen/Dense>
 #include <Eigen/Core>
-#include <iostream>
-#include <vector>
+#include <stdexcept>
 
-struct Options{
-	double tol;
-	double functol;
-	double constrtol;
-	int maxIter;
-	int m ;
-	Options(){
-		tol = 1e-4;
-		functol = 1e-8;
-		constrtol = 1e-2;
-		maxIter = 1e4;
-		m = 10;
-	}
-};
-
-const double EPS=2.2204e-016;
-
+namespace pwie
+{
+typedef std::function<double(const Eigen::VectorXd & x)> FunctionOracleType;
+typedef std::function<void(const Eigen::VectorXd & x, Eigen::VectorXd & gradient)> GradientOracleType;
+typedef std::function<void(const Eigen::VectorXd & x, Eigen::MatrixXd & hessian)> HessianOracleType;
 typedef Eigen::MatrixXd Matrix;
 typedef Eigen::VectorXd Vector;
 typedef Eigen::VectorXd::Scalar Scalar;
 
-typedef Eigen::Map<Matrix> ViewMatrix;
-typedef Eigen::Map<Vector> ViewVector;
+typedef struct Options
+{
+    double gradTol;
+    double rate;
+    size_t maxIter;
+    int m;
 
-typedef const Eigen::Map<const Matrix> ReadMatrix;
-typedef const Eigen::Map<const Vector> ReadVector;
+    Options()
+    {
+        rate = 0.00005;
+        maxIter = 100000;
+        gradTol = 1e-5;
+        m = 10;
 
-typedef std::function<double(const Eigen::VectorXd &x)> FunctionOracleType;
-typedef std::function<void(const Eigen::VectorXd &x, Eigen::VectorXd &gradient)> GradientOracleType;
+    }
+} Options;
+
+bool checkGradient(const FunctionOracleType & FunctionValue, const Vector & x, const Vector & grad, const double eps = 1e-5);
+void computeGradient(const FunctionOracleType & FunctionValue, const Vector & x, Vector & grad, const double eps = 1e-5);
+void computeHessian(const FunctionOracleType & FunctionValue, const Vector & x, Matrix & hessian, const double eps = 1e-1);
+
+const double EPS = 2.2204e-016;
+
+template<typename T>
+bool AssertSimiliar(T a, T b)
+{
+    return fabs(a - b) <=  1e-2;
+}
+template<typename T>
+bool AssertGreaterThan(T a, T b)
+{
+    return (a - b) > ((fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * 1e-3);
+}
+template<typename T>
+bool AssertLessThan(T a, T b)
+{
+    return (b - a) > ((fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * 1e-3);
+}
+template<typename T>
+bool AssertEqual(T a, T b)
+{
+    return (a == b);
+}
+}
+
+#define min(a,b) (((a)<(b))?(a):(b))
+#define max(a,b) (((a)>(b))?(a):(b))
 
 #define INF HUGE_VAL
 #define Assert(x,m) if (!(x)) { throw (std::runtime_error(m)); }
+
+
 
 #define FAST
 
@@ -75,17 +99,4 @@ typedef std::function<void(const Eigen::VectorXd &x, Eigen::VectorXd &gradient)>
 #define Debug(x) if(false){std::cout << "DEBUG: "<< x;std::cout<< std::endl;}
 #endif
 
-
-#define min(a,b) (((a)<(b))?(a):(b))
-#define max(a,b) (((a)>(b))?(a):(b))
-
-std::vector<int> sort_indexes(const std::vector< std::pair<int,double> > &v) {
-  std::vector<int> idx(v.size());
-  for (size_t i = 0; i != idx.size(); ++i)
-	  idx[i] = v[i].first;
-  sort(idx.begin(), idx.end(),[&v](size_t i1, size_t i2) {return v[i1].second < v[i2].second;});
-  return idx;
-}
-
-
-#endif /* DEFINITIONS_H_ */
+#endif /* META_H_ */
